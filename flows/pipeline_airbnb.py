@@ -7,9 +7,6 @@ from prefect import flow, task
 from prefect.tasks import task_input_hash
 from datetime import timedelta, datetime
 
-# Desativa a telemetria do Prefect
-os.environ["PREFECT_UI_TELEMETRY_ENABLED"] = "false"
-
 # 📋 Configuração de logging
 log_dir = r".\logs"
 os.makedirs(log_dir, exist_ok=True)
