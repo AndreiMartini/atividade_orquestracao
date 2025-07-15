@@ -1,0 +1,5 @@
+2025-07-15 19:40:38,205 - INFO - Arquivo carregado com sucesso: .\data\raw\listing_availability_scrape.json
+2025-07-15 19:40:39,190 - INFO - Arquivo JSON limpo salvo em: .\data\raw\listing_scrape_cleaned.json
+2025-07-15 19:40:39,996 - INFO - Arquivo carregado com sucesso: .\data\raw\listing_scrape_cleaned.json
+2025-07-15 19:40:40,893 - INFO - Join realizado com sucesso.
+2025-07-15 19:40:41,982 - INFO - Arquivo salvo com sucesso em: .\data\processed\final_table.parquet

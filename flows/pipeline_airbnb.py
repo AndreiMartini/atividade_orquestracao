@@ -5,13 +5,23 @@ import logging
 import pandas as pd
 from prefect import flow, task
 from prefect.tasks import task_input_hash
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Desativa a telemetria do Prefect
 os.environ["PREFECT_UI_TELEMETRY_ENABLED"] = "false"
 
 # 📋 Configuração de logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+log_dir = r".\logs"
+os.makedirs(log_dir, exist_ok=True)
+timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+log_file = os.path.join(log_dir, f"app_{timestamp}.log")
+
+logger = logging.getLogger("airbnb")
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler(log_file)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 @task
 def clean_json_file(input_path: str, output_path: str) -> str:
@@ -20,7 +30,7 @@ def clean_json_file(input_path: str, output_path: str) -> str:
     e salva o JSON limpo em `output_path`. Retorna o `output_path`.
     """
     if not os.path.exists(input_path):
-        logging.error(f"Arquivo não encontrado para limpeza: {input_path}")
+        logger.error(f"Arquivo não encontrado para limpeza: {input_path}")
         raise FileNotFoundError(f"{input_path} não existe.")
     
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -31,24 +41,24 @@ def clean_json_file(input_path: str, output_path: str) -> str:
         cleaned = re.sub(r',\s*(\]|\})', r'\1', content)
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(cleaned)
-        logging.info(f"Arquivo JSON limpo salvo em: {output_path}")
+        logger.info(f"Arquivo JSON limpo salvo em: {output_path}")
         return output_path
     except Exception as e:
-        logging.error(f"Erro ao limpar {input_path}: {e}")
+        logger.error(f"Erro ao limpar {input_path}: {e}")
         raise
     
 @task(retries=2, retry_delay_seconds=5, cache_key_fn=task_input_hash, cache_expiration=timedelta(days=1))
 def load_json_file(file_path: str):
     if not os.path.exists(file_path):
-        logging.error(f"Arquivo não encontrado: {file_path}")
+        logger.error(f"Arquivo não encontrado: {file_path}")
         raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
     try:
         with open(file_path, 'r') as f:
             data = json.load(f)
-        logging.info(f"Arquivo carregado com sucesso: {file_path}")
+        logger.info(f"Arquivo carregado com sucesso: {file_path}")
         return data
     except Exception as e:
-        logging.error(f"Erro ao carregar {file_path}: {e}")
+        logger.error(f"Erro ao carregar {file_path}: {e}")
         raise
 
 @task
@@ -65,10 +75,10 @@ def transform_and_join(availability_data, listing_data):
             right_on='id',
             how='left'
         )
-        logging.info("Join realizado com sucesso.")
+        logger.info("Join realizado com sucesso.")
         return merged_df
     except Exception as e:
-        logging.error(f"Erro ao transformar e unir os dados: {e}")
+        logger.error(f"Erro ao transformar e unir os dados: {e}")
         raise
 
 @task
@@ -76,12 +86,12 @@ def save_to_parquet(df, output_path: str):
     try:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df.to_parquet(output_path, index=False)
-        logging.info(f"Arquivo salvo com sucesso em: {output_path}")
+        logger.info(f"Arquivo salvo com sucesso em: {output_path}")
     except Exception as e:
-        logging.error(f"Erro ao salvar arquivo Parquet: {e}")
+        logger.error(f"Erro ao salvar arquivo Parquet: {e}")
         raise
 
-@flow(name="Pipeline Airbnb com Prefect 2")
+@flow(name="Pipeline Airbnb")
 def airbnb_pipeline(
     availability_file: str = r".\data\raw\listing_availability_scrape.json",
     listing_raw_file: str = r".\data\raw\listing_scrape.json",
